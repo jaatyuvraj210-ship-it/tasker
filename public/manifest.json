@@ -1,0 +1,10 @@
+{
+  "name": "Tasker",
+  "short_name": "Tasker",
+  "theme_color": "#0a0a0a",
+  "background_color": "#0a0a0a",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/"
+}

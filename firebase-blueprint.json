@@ -1,0 +1,25 @@
+{
+  "entities": {
+    "task": {
+      "title": "Task",
+      "description": "A task in the user's todo list",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "dueDate": { "type": "string" },
+        "priority": { "enum": ["Low", "Medium", "High"] },
+        "status": { "enum": ["pending", "completed"] },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["title", "priority", "status", "userId"]
+    }
+  },
+  "firestore": {
+    "users/{userId}/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/task" },
+      "description": "Tasks belonging to a specific user"
+    }
+  }
+}

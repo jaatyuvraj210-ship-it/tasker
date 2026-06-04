@@ -1,0 +1,6 @@
+{
+  "name": "Tasker",
+  "description": "A minimalist task manager with an AI assistant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

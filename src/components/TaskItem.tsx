@@ -47,7 +47,8 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onUpdate, onDelete }) 
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ scale: 1.01 }}
       className={cn(
-        "group flex items-center gap-4 p-4 rounded-2xl bg-card border border-border transition-all shadow-sm",
+        "group flex items-center gap-4 p-4 rounded-2xl border transition-all shadow-sm",
+        task.priority === "High" && !isCompleted ? "border-red-500/30 bg-red-500/5 dark:bg-red-500/10" : "bg-card border-border",
         isCompleted && "opacity-50"
       )}
     >

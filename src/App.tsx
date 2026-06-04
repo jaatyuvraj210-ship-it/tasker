@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { auth, db, login, logout } from "./db/firebase";
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, deleteDoc, orderBy } from "firebase/firestore";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { Task } from "./types";
+import { Task, Priority } from "./types";
 import { TaskItem } from "./components/TaskItem";
 import { AIAssistant } from "./components/AIAssistant";
 import { cn } from "./lib/utils";
@@ -18,6 +18,7 @@ export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeTab, setActiveTab] = useState<"all" | "today" | "completed">("all");
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskPriority, setNewTaskPriority] = useState<Priority>("Medium");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
 
   useEffect(() => {
@@ -101,7 +102,7 @@ export default function App() {
     try {
       await addDoc(collection(db, "users", user.uid, "tasks"), {
         title: newTaskTitle.trim(),
-        priority: "Medium",
+        priority: newTaskPriority,
         status: "pending",
         dueDate: null,
         userId: user.uid,
@@ -109,6 +110,7 @@ export default function App() {
         updatedAt: Date.now()
       });
       setNewTaskTitle("");
+      setNewTaskPriority("Medium");
     } catch (e) {
       console.error(e);
     }
@@ -192,21 +194,51 @@ export default function App() {
       <main className="max-w-3xl mx-auto px-4 sm:px-6 pt-10">
         <h1 className="text-3xl font-semibold tracking-tight mb-8 text-foreground">Good {new Date().getHours() < 12 ? 'morning' : 'afternoon'}, {user.displayName?.split(' ')[0]}</h1>
         
-        <form onSubmit={handleAddSubmit} className="relative mb-8">
-          <input 
-            type="text" 
-            value={newTaskTitle}
-            onChange={(e) => setNewTaskTitle(e.target.value)}
-            placeholder="What needs to be done?"
-            className="w-full bg-card border border-border rounded-2xl py-4 pl-5 pr-16 text-foreground placeholder:text-muted focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all shadow-sm"
-          />
-          <button
-            type="submit"
-            disabled={!newTaskTitle.trim()}
-            className="absolute right-2 top-2 bottom-2 w-[3.25rem] flex items-center justify-center bg-primary text-white rounded-xl hover:opacity-90 transition-all disabled:opacity-0 disabled:scale-95"
-          >
-            <Plus className="w-5 h-5" />
-          </button>
+        <form onSubmit={handleAddSubmit} className="mb-8 relative">
+          <div className="relative">
+            <input 
+              type="text" 
+              value={newTaskTitle}
+              onChange={(e) => setNewTaskTitle(e.target.value)}
+              placeholder="What needs to be done?"
+              className="w-full bg-card border border-border rounded-2xl py-4 pl-5 pr-16 text-foreground placeholder:text-muted focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all shadow-sm"
+            />
+            <button
+              type="submit"
+              disabled={!newTaskTitle.trim()}
+              className="absolute right-2 top-2 bottom-2 w-[3.25rem] flex items-center justify-center bg-primary text-white rounded-xl hover:opacity-90 transition-all disabled:opacity-0 disabled:scale-95"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
+          </div>
+          <AnimatePresence>
+            {newTaskTitle.trim().length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                animate={{ opacity: 1, height: 'auto', marginTop: 12 }}
+                exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                className="flex items-center gap-2 overflow-hidden"
+              >
+                {(["Low", "Medium", "High"] as const).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setNewTaskPriority(p)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border",
+                      newTaskPriority === p
+                        ? p === "High" ? "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20" :
+                          p === "Medium" ? "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20" :
+                          "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+                        : "bg-transparent text-muted border-border hover:border-foreground/20 hover:text-foreground"
+                    )}
+                  >
+                    {p} Priority
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </form>
 
         <div className="flex items-center gap-2 mb-6 no-scrollbar overflow-x-auto pb-2">

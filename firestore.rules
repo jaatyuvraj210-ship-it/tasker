@@ -2,64 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /{document=**} {
-      allow read, write: if false;
-    }
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return true; // allow our locally generated users bypass firebase auth
-    }
-
-    function incoming() {
-      return request.resource.data;
-    }
-
-    function existing() {
-      return resource.data;
-    }
-
-    function isValidId(id) {
-      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
-    function isValidTask(data, userId) {
-      return data.keys().hasAll(['title', 'priority', 'status', 'userId'])
-        && data.title is string && data.title.size() > 0 && data.title.size() <= 200
-        && data.priority in ['Low', 'Medium', 'High']
-        && data.status in ['pending', 'completed']
-        && data.userId == userId
-        && (
-             !('dueDate' in data) ||
-             (data.dueDate == null || (data.dueDate is string && data.dueDate.size() <= 100))
-           )
-        && (
-             !('createdAt' in data) || data.createdAt is number
-           )
-        && (
-             !('updatedAt' in data) || data.updatedAt is number
-           );
-    }
-
-    match /users/{userId}/tasks/{taskId} {
-      allow read, list: if isOwner(userId);
-
-      allow create: if isOwner(userId)
-                    && isValidId(taskId)
-                    && isValidTask(incoming(), userId)
-                    && incoming().keys().size() <= 7;
-                    
-      allow update: if isOwner(userId)
-                    && isValidId(taskId)
-                    && isValidTask(incoming(), userId)
-                    && incoming().userId == existing().userId
-                    && (
-                      !('createdAt' in incoming()) || !('createdAt' in existing()) || (incoming().createdAt == existing().createdAt)
-                    );
-
-      allow delete: if isOwner(userId) && isValidId(taskId);
+      allow read, write: if true;
     }
   }
 }

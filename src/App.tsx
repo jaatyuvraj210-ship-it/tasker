@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { format, isToday } from "date-fns";
-import { Plus, LogOut, CheckCircle2, Sun, Moon } from "lucide-react";
+import { Plus, LogOut, CheckCircle2, Sun, Moon, Settings, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { db, getLocalUser, logout } from "./db/firebase";
 import { collection, query, onSnapshot, addDoc, updateDoc, doc, deleteDoc, orderBy } from "firebase/firestore";
@@ -17,6 +17,14 @@ export default function App() {
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskPriority, setNewTaskPriority] = useState<Priority>("Medium");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [clientApiKey, setClientApiKey] = useState("");
+  const [showApiKey, setShowApiKey] = useState(false);
+
+  useEffect(() => {
+    const savedKey = localStorage.getItem("gemini_client_api_key") || "";
+    setClientApiKey(savedKey);
+  }, []);
 
   useEffect(() => {
     if (theme === "dark") document.documentElement.classList.add("dark");
@@ -156,6 +164,13 @@ export default function App() {
             >
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-foreground/5 transition-colors text-muted hover:text-foreground"
+              title="Settings"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
             <button 
               onClick={() => {
                 logout();
@@ -262,6 +277,82 @@ export default function App() {
       </main>
 
       <AIAssistant tasks={tasks} userId={user.uid} />
+
+      <AnimatePresence>
+        {isSettingsOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="bg-card w-full max-w-sm p-6 rounded-3xl border border-border shadow-2xl relative overflow-hidden"
+            >
+              <h2 className="text-xl font-semibold mb-2 text-foreground">Settings</h2>
+              <p className="text-xs text-muted mb-6">Configure custom options for your Tasker application.</p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-2">
+                    Client Gemini API Key (for Vercel / Static sites)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showApiKey ? "text" : "password"}
+                      value={clientApiKey}
+                      onChange={(e) => setClientApiKey(e.target.value)}
+                      placeholder="Enter your Gemini API key..."
+                      className="w-full bg-background border border-border rounded-xl py-3 pl-4 pr-12 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-primary/50 transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground transition-colors"
+                    >
+                      {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-muted mt-2 leading-relaxed">
+                    This key is stored locally on this browser. It is <span className="font-semibold text-primary">only required</span> if running on a static hosting platform (like Vercel) where the backend server is not available.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-8 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const savedKey = localStorage.getItem("gemini_client_api_key") || "";
+                    setClientApiKey(savedKey);
+                    setIsSettingsOpen(false);
+                  }}
+                  className="px-4 py-2 border border-border text-sm rounded-xl text-muted hover:text-foreground hover:bg-foreground/5 transition-all font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (clientApiKey.trim()) {
+                      localStorage.setItem("gemini_client_api_key", clientApiKey.trim());
+                    } else {
+                      localStorage.removeItem("gemini_client_api_key");
+                    }
+                    setIsSettingsOpen(false);
+                  }}
+                  className="px-5 py-2 bg-primary hover:opacity-90 text-white text-sm rounded-xl transition-all font-medium"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

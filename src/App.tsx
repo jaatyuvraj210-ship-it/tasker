@@ -34,10 +34,8 @@ export default function App() {
       await login();
     } catch (e: any) {
       console.error("Login error:", e);
-      if (e.code === 'auth/popup-blocked') {
-        setAuthError('Sign-in popup was blocked. Please click the "Open in new tab" icon (top right) in the AI Studio preview to sign in.');
-      } else if (e.code === 'auth/cancelled-popup-request' || e.code === 'auth/popup-closed-by-user') {
-        setAuthError('Sign-in was cancelled. Please try again.');
+      if (e.code === 'auth/operation-not-allowed') {
+        setAuthError('Anonymous sign-in is disabled. Please enable it in the Firebase Console: Build > Authentication > Sign-in method.');
       } else {
         setAuthError(e.message || 'Failed to sign in.');
       }
@@ -159,7 +157,7 @@ export default function App() {
             {isLoggingIn ? (
               <div className="w-5 h-5 border-2 border-inverted-text/20 border-t-inverted-text rounded-full animate-spin" />
             ) : null}
-            Continue with Google
+            Enter App
           </button>
         </div>
       </div>

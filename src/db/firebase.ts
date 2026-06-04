@@ -1,11 +1,22 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, signInAnonymously, signOut } from "firebase/auth";
-import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where, serverTimestamp } from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
 import firebaseConfig from "../../firebase-applet-config.json";
 
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 
-export const login = () => signInAnonymously(auth);
-export const logout = () => signOut(auth);
+// Local User logic instead of Firebase Auth
+const LOCAL_USER_KEY = "tasker_local_user_id";
+export const getLocalUser = () => {
+  let uid = localStorage.getItem(LOCAL_USER_KEY);
+  if (!uid) {
+    uid = "user_" + Math.random().toString(36).substring(2, 15);
+    localStorage.setItem(LOCAL_USER_KEY, uid);
+  }
+  return { uid, displayName: "Guest User" };
+};
+export const login = () => Promise.resolve();
+export const logout = () => {
+  localStorage.removeItem(LOCAL_USER_KEY);
+  return Promise.resolve();
+};

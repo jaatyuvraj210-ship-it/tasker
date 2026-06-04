@@ -2,19 +2,16 @@ import React, { useEffect, useState } from "react";
 import { format, isToday } from "date-fns";
 import { Plus, LogOut, CheckCircle2, Sun, Moon } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { auth, db, login, logout } from "./db/firebase";
-import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, deleteDoc, orderBy } from "firebase/firestore";
-import { onAuthStateChanged, User } from "firebase/auth";
+import { db, getLocalUser, logout } from "./db/firebase";
+import { collection, query, onSnapshot, addDoc, updateDoc, doc, deleteDoc, orderBy } from "firebase/firestore";
 import { Task, Priority } from "./types";
 import { TaskItem } from "./components/TaskItem";
 import { AIAssistant } from "./components/AIAssistant";
 import { cn } from "./lib/utils";
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<{uid: string, displayName: string} | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeTab, setActiveTab] = useState<"all" | "today" | "completed">("all");
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -26,29 +23,19 @@ export default function App() {
     else document.documentElement.classList.remove("dark");
   }, [theme]);
 
-  const handleLogin = async () => {
-    if (isLoggingIn) return;
-    setAuthError(null);
-    setIsLoggingIn(true);
-    try {
-      await login();
-    } catch (e: any) {
-      console.error("Login error:", e);
-      if (e.code === 'auth/operation-not-allowed') {
-        setAuthError('Anonymous sign-in is disabled. Please enable it in the Firebase Console: Build > Authentication > Sign-in method.');
-      } else {
-        setAuthError(e.message || 'Failed to sign in.');
-      }
-    } finally {
-      setIsLoggingIn(false);
-    }
+  const handleLogin = () => {
+    setUser(getLocalUser());
   };
 
   useEffect(() => {
-    return onAuthStateChanged(auth, (u) => {
-      setUser(u);
+    // Just mock auth state checking
+    setTimeout(() => {
+      const existingUser = localStorage.getItem("tasker_local_user_id");
+      if (existingUser) {
+        setUser(getLocalUser());
+      }
       setAuthLoading(false);
-    });
+    }, 500);
   }, []);
 
   useEffect(() => {
@@ -142,21 +129,11 @@ export default function App() {
           </div>
           <h1 className="text-2xl font-semibold mb-2 text-foreground">Welcome to Tasker</h1>
           <p className="text-muted mb-8">A minimalist task manager powered by AI.</p>
-          
-          {authError && (
-            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 dark:text-red-400 text-sm">
-              {authError}
-            </div>
-          )}
 
           <button 
             onClick={handleLogin}
-            disabled={isLoggingIn}
-            className="w-full py-3.5 px-4 bg-inverted text-inverted-text font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-3.5 px-4 bg-inverted text-inverted-text font-medium rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
           >
-            {isLoggingIn ? (
-              <div className="w-5 h-5 border-2 border-inverted-text/20 border-t-inverted-text rounded-full animate-spin" />
-            ) : null}
             Enter App
           </button>
         </div>
@@ -180,7 +157,10 @@ export default function App() {
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
             <button 
-              onClick={logout}
+              onClick={() => {
+                logout();
+                setUser(null);
+              }}
               className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-foreground/5 transition-colors text-muted hover:text-foreground"
             >
               <LogOut className="w-4 h-4" />

@@ -3,12 +3,19 @@ import { CheckCircle2, Send, X, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { askAssistant } from "../lib/api";
 import { Task } from "../types";
+import { cn } from "../lib/utils";
 
-export function AIAssistant({ tasks, userId }: { tasks: Task[]; userId: string }) {
+export function AIAssistant({ tasks, userId, chaosMode = false }: { tasks: Task[]; userId: string; chaosMode?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<{ role: "assistant" | "user"; text: string }[]>([
     { role: "assistant", text: "Hi! I can help you manage your tasks. Try saying 'Add gym tomorrow' or 'What should I do today?'" },
   ]);
+
+  useEffect(() => {
+    if (chaosMode && messages.length === 1) {
+      setMessages([{ role: "assistant", text: "WHAT ARE YOU WAITING FOR?! START ADDING TASKS OR GET TO WORK OUT MAGGOT! PUSH! PUSH! PUSH!" }]);
+    }
+  }, [chaosMode]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -28,7 +35,7 @@ export function AIAssistant({ tasks, userId }: { tasks: Task[]; userId: string }
     setIsLoading(true);
 
     try {
-      const reply = await askAssistant(userMessage, tasks, userId);
+      const reply = await askAssistant(userMessage, tasks, userId, chaosMode);
       if (reply) {
         setMessages((prev) => [...prev, { role: "assistant", text: reply }]);
       } else {
@@ -107,10 +114,15 @@ export function AIAssistant({ tasks, userId }: { tasks: Task[]; userId: string }
 
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-14 h-14 bg-inverted text-inverted-text rounded-full shadow-lg shadow-foreground/5 hover:scale-105 active:scale-95 transition-all flex items-center justify-center relative group"
+        className={cn(
+          "w-14 h-14 rounded-full shadow-lg hover:scale-105 p-0 active:scale-95 transition-all flex items-center justify-center relative group",
+          chaosMode 
+            ? "bg-red-600 text-white shadow-red-500/50 animate-pulse" 
+            : "bg-inverted text-inverted-text shadow-foreground/5"
+        )}
       >
-        <CheckCircle2 className="w-6 h-6" />
-        <div className="absolute inset-0 rounded-full border border-inverted/20 animate-ping group-hover:hidden" />
+        <CheckCircle2 className={cn("w-6 h-6", chaosMode && "animate-spin-[3s_linear_infinite]")} />
+        <div className={cn("absolute inset-0 rounded-full border animate-ping group-hover:hidden", chaosMode ? "border-red-500" : "border-inverted/20")} />
       </button>
     </div>
   );

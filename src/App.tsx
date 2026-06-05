@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { format, isToday } from "date-fns";
-import { Plus, LogOut, CheckCircle2, Sun, Moon, Settings, Eye, EyeOff } from "lucide-react";
+import { Plus, LogOut, CheckCircle2, Sun, Moon, Flame } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { db, getLocalUser, logout } from "./db/firebase";
 import { collection, query, onSnapshot, addDoc, updateDoc, doc, deleteDoc, orderBy } from "firebase/firestore";
@@ -8,6 +8,7 @@ import { Task, Priority } from "./types";
 import { TaskItem } from "./components/TaskItem";
 import { AIAssistant } from "./components/AIAssistant";
 import { cn } from "./lib/utils";
+import confetti from "canvas-confetti";
 
 export default function App() {
   const [user, setUser] = useState<{uid: string, displayName: string} | null>(null);
@@ -17,19 +18,12 @@ export default function App() {
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskPriority, setNewTaskPriority] = useState<Priority>("Medium");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [clientApiKey, setClientApiKey] = useState("");
-  const [showApiKey, setShowApiKey] = useState(false);
+  const [chaosMode, setChaosMode] = useState(false);
 
   useEffect(() => {
-    const savedKey = localStorage.getItem("gemini_client_api_key") || "";
-    setClientApiKey(savedKey);
-  }, []);
-
-  useEffect(() => {
-    if (theme === "dark") document.documentElement.classList.add("dark");
+    if (theme === "dark" || chaosMode) document.documentElement.classList.add("dark");
     else document.documentElement.classList.remove("dark");
-  }, [theme]);
+  }, [theme, chaosMode]);
 
   const handleLogin = () => {
     setUser(getLocalUser());
@@ -71,6 +65,41 @@ export default function App() {
   const handleUpdate = async (id: string, updates: Partial<Task>) => {
     if (!user) return;
     try {
+      if (updates.status === "completed") {
+        const taskNode = document.getElementById(`task-${id}`);
+        if (taskNode) {
+          const rect = taskNode.getBoundingClientRect();
+          const x = (rect.left + rect.width / 2) / window.innerWidth;
+          const y = (rect.top + rect.height / 2) / window.innerHeight;
+          
+          if (chaosMode) {
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+            const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+            
+            const interval: any = setInterval(function() {
+              const particleRatio = 50;
+              confetti({
+                ...defaults, origin: { x: randomInRange(0.1, 0.9), y: randomInRange(0.1, 0.9) },
+                colors: ['#ef4444', '#f97316', '#000000', '#ffffff'],
+                particleCount: Math.floor(200 * particleRatio)
+              });
+            }, 250);
+            setTimeout(() => clearInterval(interval), 1000);
+          } else {
+            confetti({
+              particleCount: 100,
+              spread: 70,
+              origin: { x, y }
+            });
+          }
+        } else {
+          confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.8 }
+          });
+        }
+      }
       await updateDoc(doc(db, "users", user.uid, "tasks", id), {
         ...updates,
         updatedAt: Date.now()
@@ -150,26 +179,28 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen pb-24 transition-colors">
-      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border transition-colors">
+    <div className={cn("min-h-screen pb-24 transition-all duration-500", chaosMode ? "bg-red-950/20" : "")}>
+      <header className={cn("sticky top-0 z-10 backdrop-blur-xl border-b transition-colors", chaosMode ? "bg-red-900/10 border-red-900/50" : "bg-background/80 border-border")}>
         <div className="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-6 h-6 text-foreground" />
-            <span className="font-semibold text-lg tracking-tight text-foreground">Tasker</span>
+            <CheckCircle2 className={cn("w-6 h-6", chaosMode ? "text-red-500 animate-pulse" : "text-foreground")} />
+            <span className={cn("font-semibold text-lg tracking-tight", chaosMode ? "text-red-500" : "text-foreground")}>
+              {chaosMode ? "TASK DESTROYER" : "Tasker"}
+            </span>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setChaosMode(c => !c)}
+              className={cn("w-9 h-9 flex items-center justify-center rounded-full transition-colors", chaosMode ? "bg-red-500/20 text-red-500 hover:bg-red-500/40" : "text-muted hover:text-foreground hover:bg-foreground/5")}
+              title={chaosMode ? "Disable Chaos Mode" : "Enable Chaos Mode"}
+            >
+              <Flame className={cn("w-4 h-4", chaosMode && "animate-bounce")} />
+            </button>
             <button
               onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
               className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-foreground/5 transition-colors text-muted hover:text-foreground"
             >
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-            <button
-              onClick={() => setIsSettingsOpen(true)}
-              className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-foreground/5 transition-colors text-muted hover:text-foreground"
-              title="Settings"
-            >
-              <Settings className="w-4 h-4" />
             </button>
             <button 
               onClick={() => {
@@ -264,95 +295,20 @@ export default function App() {
               </motion.div>
             ) : (
               filteredTasks.map(task => (
-                <TaskItem 
-                  key={task.id} 
-                  task={task} 
-                  onUpdate={handleUpdate}
-                  onDelete={handleDelete}
-                />
+                <div id={`task-${task.id}`} key={task.id} className={cn("transition-transform", chaosMode ? "hover:-rotate-1" : "")}>
+                  <TaskItem 
+                    task={task} 
+                    onUpdate={handleUpdate}
+                    onDelete={handleDelete}
+                  />
+                </div>
               ))
             )}
           </AnimatePresence>
         </div>
       </main>
 
-      <AIAssistant tasks={tasks} userId={user.uid} />
-
-      <AnimatePresence>
-        {isSettingsOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-          >
-            <motion.div
-              initial={{ scale: 0.95, y: 15 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 15 }}
-              className="bg-card w-full max-w-sm p-6 rounded-3xl border border-border shadow-2xl relative overflow-hidden"
-            >
-              <h2 className="text-xl font-semibold mb-2 text-foreground">Settings</h2>
-              <p className="text-xs text-muted mb-6">Configure custom options for your Tasker application.</p>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-2">
-                    Client Gemini API Key (for Vercel / Static sites)
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showApiKey ? "text" : "password"}
-                      value={clientApiKey}
-                      onChange={(e) => setClientApiKey(e.target.value)}
-                      placeholder="Enter your Gemini API key..."
-                      className="w-full bg-background border border-border rounded-xl py-3 pl-4 pr-12 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-primary/50 transition-colors"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowApiKey(!showApiKey)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground transition-colors"
-                    >
-                      {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-muted mt-2 leading-relaxed">
-                    This key is stored locally on this browser. It is <span className="font-semibold text-primary">only required</span> if running on a static hosting platform (like Vercel) where the backend server is not available.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-8 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const savedKey = localStorage.getItem("gemini_client_api_key") || "";
-                    setClientApiKey(savedKey);
-                    setIsSettingsOpen(false);
-                  }}
-                  className="px-4 py-2 border border-border text-sm rounded-xl text-muted hover:text-foreground hover:bg-foreground/5 transition-all font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (clientApiKey.trim()) {
-                      localStorage.setItem("gemini_client_api_key", clientApiKey.trim());
-                    } else {
-                      localStorage.removeItem("gemini_client_api_key");
-                    }
-                    setIsSettingsOpen(false);
-                  }}
-                  className="px-5 py-2 bg-primary hover:opacity-90 text-white text-sm rounded-xl transition-all font-medium"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <AIAssistant tasks={tasks} userId={user.uid} chaosMode={chaosMode} />
     </div>
   );
 }
